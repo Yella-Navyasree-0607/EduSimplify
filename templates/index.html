@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduSimplify – AI Course Content Simplification</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ HEADER ══ -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-icon">🎓</span>
+      <div>
+        <span class="brand-name">EduSimplify</span>
+        <span class="brand-tagline">Agentic AI Course Content Simplification</span>
+      </div>
+    </div>
+    <div id="statusBadge" class="status-badge status-checking">
+      <span class="status-dot"></span>
+      <span id="statusText">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════ DEMO MODE BANNER ══ -->
+<div id="demoBanner" class="demo-banner hidden">
+  <span class="demo-banner-icon">🎭</span>
+  <div>
+    <strong>Demo Mode Active</strong> — The full 5-agent workflow runs with pre-written
+    sample responses. No IBM credentials required.
+    To use real IBM Granite AI, add <code>IBM_API_KEY</code> and
+    <code>IBM_PROJECT_ID</code> to your <code>.env</code> file.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ HERO STRIP ══ -->
+<section class="hero">
+  <p class="hero-text">
+    Paste any complex academic text below. Choose your proficiency level.<br/>
+    Five specialised AI agents will analyse, simplify, generate examples,
+    create exam questions, and review the output — powered by
+    <strong>IBM Granite</strong> on watsonx.ai (or Demo Mode for instant previews).
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════ AGENT WORKFLOW ══ -->
+<section class="workflow-section">
+  <h2 class="section-title">Agent Workflow</h2>
+  <div class="workflow">
+    <div class="workflow-node" title="Identifies domain, topics & complexity">
+      <div class="wf-num">1</div>
+      <div class="wf-label">Content<br/>Analyzer</div>
+    </div>
+    <div class="workflow-arrow">→</div>
+    <div class="workflow-node" title="Produces plain-language explanation, concepts & summary">
+      <div class="wf-num">2</div>
+      <div class="wf-label">Simplification<br/>Agent</div>
+    </div>
+    <div class="workflow-arrow">→</div>
+    <div class="workflow-node" title="Creates real-world examples tailored to the level">
+      <div class="wf-num">3</div>
+      <div class="wf-label">Example<br/>Generator</div>
+    </div>
+    <div class="workflow-arrow">→</div>
+    <div class="workflow-node" title="Generates MCQs, short-answer & application questions">
+      <div class="wf-num">4</div>
+      <div class="wf-label">Exam Question<br/>Agent</div>
+    </div>
+    <div class="workflow-arrow">→</div>
+    <div class="workflow-node" title="Quality-checks all agent outputs & scores them">
+      <div class="wf-num">5</div>
+      <div class="wf-label">Review<br/>Agent</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ INPUT FORM ══ -->
+<main class="main-content">
+  <section class="card input-card">
+    <h2 class="card-title">📥 Input Academic Content</h2>
+
+    <label class="field-label" for="academicContent">
+      Paste your academic text here
+    </label>
+    <textarea
+      id="academicContent"
+      class="content-textarea"
+      placeholder="e.g. Newton's laws of motion state that an object at rest stays at rest and an object in motion stays in motion unless acted upon by an external force…"
+      rows="10"
+    ></textarea>
+
+    <div class="controls-row">
+      <div class="level-group">
+        <label class="field-label" for="levelSelect">Proficiency Level</label>
+        <div class="level-buttons" id="levelButtons">
+          <button class="level-btn active" data-level="Beginner">🟢 Beginner</button>
+          <button class="level-btn"        data-level="Intermediate">🟡 Intermediate</button>
+          <button class="level-btn"        data-level="Advanced">🔴 Advanced</button>
+        </div>
+        <input type="hidden" id="selectedLevel" value="Beginner" />
+      </div>
+
+      <button id="simplifyBtn" class="btn-primary" onclick="runSimplify()">
+        ⚡ Simplify Content
+      </button>
+    </div>
+
+    <!-- Sample content loader -->
+    <div class="sample-row">
+      <span class="sample-label">Try a sample:</span>
+      <button class="sample-btn" onclick="loadSample('physics')">⚛️ Physics</button>
+      <button class="sample-btn" onclick="loadSample('cs')">💻 Computer Science</button>
+      <button class="sample-btn" onclick="loadSample('biology')">🧬 Biology</button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════ PROGRESS / ERROR BANNER ══ -->
+  <div id="progressBanner" class="progress-banner hidden">
+    <div class="spinner"></div>
+    <div>
+      <strong>Agents at work…</strong>
+      <div id="progressStep" class="progress-step">Initialising pipeline</div>
+    </div>
+  </div>
+
+  <div id="errorBanner" class="error-banner hidden">
+    <span class="error-icon">⚠️</span>
+    <div id="errorMessage"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════ RESULTS CONTAINER ══ -->
+  <div id="resultsContainer" class="hidden">
+
+    <!-- Meta bar -->
+    <div class="meta-bar">
+      <span class="meta-chip" id="metaDomain"></span>
+      <span class="meta-chip" id="metaLevel"></span>
+      <span class="meta-chip" id="metaDetected"></span>
+      <span class="meta-chip meta-chip-demo hidden" id="metaDemo"></span>
+    </div>
+
+    <!-- ── Tab navigation ── -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('explanation')">📖 Explanation</button>
+      <button class="tab-btn" onclick="switchTab('concepts')">🔑 Key Concepts</button>
+      <button class="tab-btn" onclick="switchTab('examples')">💡 Examples</button>
+      <button class="tab-btn" onclick="switchTab('exam')">📝 Exam Questions</button>
+      <button class="tab-btn" onclick="switchTab('review')">⭐ Review</button>
+    </div>
+
+    <!-- ── Tab: Explanation ── -->
+    <div id="tab-explanation" class="tab-panel active">
+      <div class="card result-card">
+        <h3 class="card-title">🗣️ Simple Explanation</h3>
+        <p id="simpleExplanation" class="explanation-text"></p>
+      </div>
+      <div class="card result-card">
+        <h3 class="card-title">📌 Important Points</h3>
+        <ul id="importantPoints" class="points-list"></ul>
+      </div>
+      <div class="card result-card summary-card">
+        <h3 class="card-title">📋 Short Summary</h3>
+        <p id="shortSummary" class="summary-text"></p>
+      </div>
+    </div>
+
+    <!-- ── Tab: Key Concepts ── -->
+    <div id="tab-concepts" class="tab-panel hidden">
+      <div class="card result-card">
+        <h3 class="card-title">🔑 Key Concepts</h3>
+        <div id="keyConcepts" class="concepts-grid"></div>
+      </div>
+      <div class="card result-card">
+        <h3 class="card-title">🗂️ Topics Identified</h3>
+        <div id="mainTopics" class="tag-list"></div>
+      </div>
+    </div>
+
+    <!-- ── Tab: Examples ── -->
+    <div id="tab-examples" class="tab-panel hidden">
+      <div id="examplesContainer"></div>
+    </div>
+
+    <!-- ── Tab: Exam Questions ── -->
+    <div id="tab-exam" class="tab-panel hidden">
+      <div class="card result-card">
+        <h3 class="card-title">🔵 Multiple Choice Questions</h3>
+        <div id="mcqContainer"></div>
+      </div>
+      <div class="card result-card">
+        <h3 class="card-title">✏️ Short Answer Questions</h3>
+        <div id="saContainer"></div>
+      </div>
+      <div class="card result-card">
+        <h3 class="card-title">🧠 Application Question</h3>
+        <p id="applicationQuestion" class="app-question"></p>
+      </div>
+    </div>
+
+    <!-- ── Tab: Review ── -->
+    <div id="tab-review" class="tab-panel hidden">
+      <div class="card result-card">
+        <h3 class="card-title">⭐ Quality Review (by Review Agent)</h3>
+        <div class="scores-grid" id="scoresGrid"></div>
+        <div class="review-note" id="reviewNote"></div>
+        <div class="improvement-tip" id="improvementTip"></div>
+      </div>
+      <div class="card result-card">
+        <h3 class="card-title">🔄 Pipeline Execution Log</h3>
+        <ol id="pipelineLog" class="pipeline-log"></ol>
+      </div>
+    </div>
+
+  </div><!-- /resultsContainer -->
+</main>
+
+<!-- ══════════════════════════════════════════════════════ FOOTER ══ -->
+<footer class="site-footer">
+  <p>EduSimplify &nbsp;|&nbsp; Agentic AI powered by <strong>IBM Granite</strong> on watsonx.ai
+     &nbsp;|&nbsp; Academic Project Demo</p>
+</footer>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
